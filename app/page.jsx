@@ -1,10 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import Cards from "./_component/cards";
+
+const PokemonCard = lazy(() => import("./_component/cards"));
 
 async function getPokemons() {
-  const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=50");
+  const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=51");
   const data = await res.json();
   const pokemons = await Promise.all(
     data.results.map(async (pokemon) => {
@@ -20,8 +23,19 @@ async function getPokemons() {
   return pokemons;
 }
 
-export default async function Home() {
-  const pokemons = await getPokemons();
+export default function Home() {
+  const [search, setSearch] = useState("");
+  const [pokemons, setPokemons] = useState([]);
+
+  console.log(search);
+
+  useEffect(() => {
+    getPokemons().then(setPokemons);
+  }, []);
+
+  const filteredPokemons = pokemons.filter((pokemon) =>
+    pokemon.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div>
@@ -40,27 +54,17 @@ export default async function Home() {
               type="text"
               placeholder="Search"
               className="rounded-lg font-semibold w-24 sm:w-full text-neutral-900 text-sm px-2 sm:text-lg"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </p>
         </h1>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-wrap">
-          {pokemons.map((pokemon) => (
-            <Link key={pokemon.id} href={`/pokemon/${pokemon.id}`}>
-              <div className="relative p-4 rounded-lg flex flex-col text-center items-center justify-center shadow cursor-pointer hover:scale-105 hover:bg-neutral-800/60 duration-300 bg-neutral-800/90 before:content-[''] before:absolute before:inset-0 before:bg-[radial-gradient(circle,rgba(255,255,255,0.10)_10%,rgba(0,0,0,0)_70%)] before:rounded-lg before:z-0">
-                <div className="relative z-10 flex flex-col items-center">
-                  <Image
-                    src={pokemon.image}
-                    alt={pokemon.name}
-                    width={150}
-                    height={150}
-                  />
-                  <p className="text-center text-xl font-semibold mt-2">
-                    {pokemon.name}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
+          <Suspense fallback={<p>Loading...</p>}>
+            {filteredPokemons.map((pokemon) => (
+              <PokemonCard key={pokemon.id} pokemon={pokemon} />
+            ))}
+          </Suspense>
         </div>
       </div>
     </div>
